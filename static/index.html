@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Tools Config</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%234f46e5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="logo">Claude Tools Config</span>
+    <div class="current-project">
+      <span id="current-project-name" class="current-name">Проект не выбран</span>
+      <button type="button" id="choose-project" class="primary">Выбрать проект</button>
+      <button type="button" id="shutdown" class="icon-button" title="Остановить Claude Tools Config" aria-label="Остановить Claude Tools Config">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 3v9"></path>
+          <path d="M6.3 7.2a8 8 0 1 0 11.4 0"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+  <p id="server-error" class="banner" role="alert" hidden>Сервер недоступен. Запустите <code>python3 app.py</code> и обновите страницу.</p>
+
+  <main class="panels">
+    <section class="panel" id="global-panel">
+      <div class="panel-head">
+        <h2>Глобально</h2>
+        <nav class="tabs"></nav>
+      </div>
+      <div class="filters">
+        <button type="button" class="select-toggle small"></button>
+        <input class="filter" type="search" placeholder="Фильтр по имени">
+        <div class="segmented" role="radiogroup" aria-label="Сортировка"></div>
+      </div>
+      <div class="error" hidden></div>
+      <div class="notice" hidden></div>
+      <div class="progress" hidden></div>
+      <div class="scroll">
+        <div class="bulk grid-global"></div>
+        <ul class="list"></ul>
+      </div>
+    </section>
+
+    <section class="panel" id="project-panel">
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Проект</h2>
+          <button type="button" id="open-presets" class="small" title="Сохранить или применить набор переопределений">Пресеты</button>
+        </div>
+        <nav class="tabs"></nav>
+      </div>
+      <div class="filters">
+        <button type="button" class="select-toggle small"></button>
+        <input class="filter" type="search" placeholder="Фильтр по имени">
+        <div class="segmented" role="radiogroup" aria-label="Сортировка"></div>
+      </div>
+      <div class="error" hidden></div>
+      <div class="notice" hidden></div>
+      <div class="progress" hidden></div>
+      <div class="scroll">
+        <div class="bulk grid-project"></div>
+        <ul class="list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="picker">
+    <form method="dialog" class="detail-close"><button aria-label="Закрыть">✕</button></form>
+    <h3>Выбор проекта</h3>
+    <form id="project-form" class="inline-form">
+      <input id="project-path" type="text" placeholder="Абсолютный путь: /Users/me/app или C:\Users\me\app" spellcheck="false" autocomplete="off">
+      <button type="submit" class="primary">Открыть</button>
+    </form>
+    <div class="error" id="picker-error" hidden></div>
+    <h4>Недавние</h4>
+    <ul id="recent-list" class="recent-list"></ul>
+  </dialog>
+
+  <dialog id="presets">
+    <form method="dialog" class="detail-close"><button aria-label="Закрыть">✕</button></form>
+    <h3>Пресеты</h3>
+    <div class="presets-toolbar">
+      <button type="button" id="preset-create" class="primary small">Создать пресет</button>
+    </div>
+    <div class="error" id="presets-error" hidden></div>
+    <ul id="preset-list" class="preset-list"></ul>
+  </dialog>
+
+  <dialog id="preset-edit">
+    <form method="dialog" class="detail-close"><button aria-label="Закрыть">✕</button></form>
+    <h3 id="preset-edit-title">Изменение пресета</h3>
+    <form id="preset-edit-form">
+      <input id="preset-edit-name" class="preset-name" type="text" placeholder="Название пресета" maxlength="80" autocomplete="off">
+      <div id="preset-edit-overrides" class="preset-editor"></div>
+      <div class="error" id="preset-edit-error" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" id="preset-edit-cancel">Отмена</button>
+        <button type="submit" class="primary">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detail">
+    <form method="dialog" class="detail-close"><button aria-label="Закрыть">✕</button></form>
+    <div class="detail-body"></div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
