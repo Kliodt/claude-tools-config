@@ -50,7 +50,7 @@ const PENCIL_ICON = `<svg ${ICON_ATTRS}><path d="M4 20h4L19 9l-4-4L4 16v4z"></pa
 const TRASH_ICON = `<svg ${ICON_ATTRS}><path d="M4 7h16"></path><path d="M10 11v6M14 11v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>`;
 
 const ROW_CONTROLS_SELECTOR ="input, select, button:not(.row-name)";
-const LOCKED_TITLE = "Заблокировано автором (disable-model-invocation): вызывается только вручную через /имя";
+const LOCKED_TITLE = "Заблокировано автором (disable-model-invocation): вызывается только вручную через /имя; можно выключить (off)";
 const RESET_TITLE = "Значение переопределено в проекте. Нажмите, чтобы сбросить и наследовать глобальное";
 
 const state = {
@@ -472,10 +472,7 @@ function plural(count, [one, few, many]) {
 }
 
 function valueSelect(item, onChange) {
-  const select = el("select", { className: `badge v-${item.value}`, title: "Значение", disabled: Boolean(item.locked) });
-  if (item.locked) {
-    select.title = LOCKED_TITLE;
-  }
+  const select = el("select", { className: `badge v-${item.value}`, title: "Значение" });
   item.allowed_values.forEach((value) => select.append(el("option", { value, selected: value === item.value }, value)));
   select.addEventListener("change", () => onChange(select.value));
   return select;
@@ -500,20 +497,19 @@ function renderBulk(panelName) {
     renderPanel(panelName);
   });
 
-  const editable = chosen.filter((item) => !item.locked);
-  const values = el("select", { className: "bulk-value", title: "Задать значение выбранным (кроме заблокированных автором)", disabled: editable.length === 0 });
+  const values = el("select", { className: "bulk-value", title: "Задать значение выбранным", disabled: chosen.length === 0 });
   values.append(el("option", { value: "" }, "Значение…"));
-  commonValues(editable).forEach((value) => values.append(el("option", { value }, value)));
+  commonValues(chosen).forEach((value) => values.append(el("option", { value }, value)));
   values.addEventListener("change", () => {
     if (values.value) {
-      runBatch(panelName, editable, values.value);
+      runBatch(panelName, chosen, values.value);
     }
   });
 
   const cells = [all, el("div", { className: "bulk-main" }, `Выбрано: ${chosen.length}`), values];
   if (panelName === Panel.PROJECT) {
-    const resetProps = { className: "icon", title: "Сбросить переопределения у выбранных", disabled: editable.length === 0 };
-    cells.push(button(resetProps, "↺", () => runBatch(panelName, editable, null)));
+    const resetProps = { className: "icon", title: "Сбросить переопределения у выбранных", disabled: chosen.length === 0 };
+    cells.push(button(resetProps, "↺", () => runBatch(panelName, chosen, null)));
   }
   bar.replaceChildren(...cells);
 }
@@ -592,7 +588,7 @@ async function withPresets(task) {
 
 function projectOverrides() {
   return allItems(Panel.PROJECT)
-    .filter((item) => item.source === Source.OVERRIDE && !item.locked)
+    .filter((item) => item.source === Source.OVERRIDE)
     .map((item) => ({ kind: item.kind, id: item.id, value: item.value }));
 }
 
@@ -701,7 +697,7 @@ function addOverrideRow(draft, items) {
     add.disabled = !item;
   };
   const fillItems = () => {
-    const candidates = [...items.values()].filter((item) => item.kind === kindSelect.value && !item.locked && !used.has(itemKey(item)));
+    const candidates = [...items.values()].filter((item) => item.kind === kindSelect.value && !used.has(itemKey(item)));
     candidates.sort((a, b) => a.id.localeCompare(b.id));
     itemSelect.replaceChildren(...candidates.map((item) => el("option", { value: item.id }, item.id)));
     fillValues();

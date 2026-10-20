@@ -122,7 +122,7 @@ class ProjectService:
             skill = skills[skill_id]
             resolved = self._resolve_skill(skill_id, skill_id in project_ids, files)
             if skill.locked:
-                resolved = Resolved(locked_or(skill, resolved.value), Source.GLOBAL)
+                resolved = Resolved(locked_or(skill, resolved.value), resolved.source)
             items.append(self._item(ItemKind.SKILL, skill_id, resolved, skill_allowed_values(skill), locked=skill.locked))
         return items
 
@@ -202,7 +202,7 @@ class ProjectService:
         )
 
     def _set_skill(self, project: Path, skill_id: str, value: Value) -> None:
-        self.pool.editable_skill(skill_id, project)
+        self.pool.check_skill_value(skill_id, value, project)
         self._update_local(project, lambda data: set_or_pop(data, SKILL_OVERRIDES, skill_id, str(value)))
 
     def _set_plugin(self, project: Path, plugin_id: str, value: Value) -> None:

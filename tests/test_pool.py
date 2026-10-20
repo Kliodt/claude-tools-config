@@ -46,18 +46,30 @@ class PoolTest(FakeHomeTestCase):
         self.assertEqual(read_json(self.paths.user_settings)["skillOverrides"]["anthropic-skills:docx"], "off")
         self.assertEqual(self.pool.detail(ItemKind.SKILL, "anthropic-skills:docx").description, "Word documents")
 
-    def test_author_locked_skill_is_user_invocable_only_and_not_editable(self) -> None:
+    def test_author_locked_skill_is_user_invocable_only_or_off(self) -> None:
         write_skill(self.paths.user_skills, "manual", "x", "disable-model-invocation: true")
 
         item = next(item for item in self.pool.pool().skills if item.id == "manual")
 
         self.assertTrue(item.locked)
-        self.assertEqual((item.value, item.allowed_values), (Value.USER_INVOCABLE_ONLY, [Value.USER_INVOCABLE_ONLY]))
+        self.assertEqual((item.value, item.allowed_values), (Value.USER_INVOCABLE_ONLY, [Value.USER_INVOCABLE_ONLY, Value.OFF]))
         with self.assertRaises(BadRequestError):
-            self.pool.set_global(ItemKind.SKILL, "manual", Value.OFF)
+            self.pool.set_global(ItemKind.SKILL, "manual", Value.ON)
         with self.assertRaises(BadRequestError):
-            self.service.set_value(self.project, ItemKind.SKILL, "manual", Value.OFF)
+            self.service.set_value(self.project, ItemKind.SKILL, "manual", Value.NAME_ONLY)
         self.assertEqual(self.project_items()["skill:manual"], ("user-invocable-only", "global"))
+
+    def test_author_locked_skill_can_be_turned_off_and_back(self) -> None:
+        write_skill(self.paths.user_skills, "manual", "x", "disable-model-invocation: true")
+
+        self.pool.set_global(ItemKind.SKILL, "manual", Value.OFF)
+        global_off = next(item for item in self.pool.pool().skills if item.id == "manual").value
+        project_off = self.project_items()["skill:manual"]
+        self.service.set_value(self.project, ItemKind.SKILL, "manual", Value.USER_INVOCABLE_ONLY)
+
+        self.assertEqual(global_off, Value.OFF)
+        self.assertEqual(project_off, ("off", "global"))
+        self.assertEqual(self.project_items()["skill:manual"], ("user-invocable-only", "override"))
 
     def test_plugin_in_skills_dir_is_installed(self) -> None:
         plugin_dir = self.paths.user_skills / "figma-extract"

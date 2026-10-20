@@ -6,7 +6,7 @@ from .dto import (
     ChildDto,
     ConfigEntryDto,
     ItemDetailDto,
-    LOCKED_SKILL_VALUE,
+    LOCKED_SKILL_VALUES,
     ItemKind,
     PluginContentsDto,
     PoolDto,
@@ -156,14 +156,14 @@ def registry_install_path(entries: Any) -> Path | None:
 
 
 def locked_or(skill: SkillInfo, value: Value) -> Value:
-    if skill.locked:
-        return LOCKED_SKILL_VALUE
+    if skill.locked and value != Value.OFF:
+        return Value.USER_INVOCABLE_ONLY
     return value
 
 
 def skill_allowed_values(skill: SkillInfo) -> list[Value]:
     if skill.locked:
-        return [LOCKED_SKILL_VALUE]
+        return LOCKED_SKILL_VALUES
     return allowed_values(ItemKind.SKILL)
 
 
@@ -211,11 +211,10 @@ class PoolService:
             raise NotFoundError(f"Скилл «{skill_id}» не найден")
         return skill
 
-    def editable_skill(self, skill_id: str, project: Path | None = None) -> SkillInfo:
+    def check_skill_value(self, skill_id: str, value: Value, project: Path | None = None) -> None:
         skill = self.find_skill(skill_id, project)
-        if skill.locked:
-            raise BadRequestError(f"Скилл «{skill_id}» заблокирован автором (disable-model-invocation)")
-        return skill
+        if value not in skill_allowed_values(skill):
+            raise BadRequestError(f"Скилл «{skill_id}» заблокирован автором (disable-model-invocation): допустимо только user-invocable-only или off")
 
     def find_plugin(self, plugin_id: str) -> PluginInfo:
         plugin = next((candidate for candidate in self.plugins() if candidate.id == plugin_id), None)
@@ -401,7 +400,7 @@ class PoolService:
             self._set_global_mcp(item_id, value)
 
     def _set_global_skill(self, skill_id: str, value: Value) -> None:
-        self.editable_skill(skill_id)
+        self.check_skill_value(skill_id, value)
         self.store.update(self.paths.user_settings, lambda data: set_or_pop(data, SKILL_OVERRIDES, skill_id, str(value)))
 
     def _set_global_plugin(self, plugin_id: str, value: Value) -> None:

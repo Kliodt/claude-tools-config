@@ -45,8 +45,8 @@ Global pool (left panel) = everything installed, with its global value:
 | mcp | top-level `mcpServers` in `~/.claude.json` (= on) + `~/.config/claude-tools-config/mcp-pool.json` (= off) | on / off |
 
 Skill values: `on`, `name-only`, `user-invocable-only`, `off`. Plugin and MCP values: `on`, `off`.
-A skill with `disable-model-invocation: true` in SKILL.md is locked by its author: Claude Code ignores `skillOverrides` for it,
-so the app shows it as `user-invocable-only` with a lock icon and refuses to change it.
+A skill with `disable-model-invocation: true` in SKILL.md is locked by its author (lock icon): the model never invokes it,
+so only `user-invocable-only` and `off` are allowed. Claude Code honors `off` for it; any other stored value is shown as `user-invocable-only`.
 
 Project (right panel) shows every item with its effective value; enabled items first. Each item either inherits or overrides.
 Overrides are written only to personal files; `<project>/.claude/settings.json` is read-only for this app.

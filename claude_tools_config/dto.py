@@ -26,7 +26,7 @@ SKILL_VALUES = [Value.ON, Value.NAME_ONLY, Value.USER_INVOCABLE_ONLY, Value.OFF]
 TOGGLE_VALUES = [Value.ON, Value.OFF]
 
 
-LOCKED_SKILL_VALUE = Value.USER_INVOCABLE_ONLY
+LOCKED_SKILL_VALUES = [Value.USER_INVOCABLE_ONLY, Value.OFF]
 
 
 def allowed_values(kind: ItemKind) -> list[Value]:
