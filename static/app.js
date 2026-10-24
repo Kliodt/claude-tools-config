@@ -793,9 +793,6 @@ async function copyText(text, trigger) {
 }
 
 async function shutdown() {
-  if (!window.confirm("Остановить Claude Tools Config?")) {
-    return;
-  }
   try {
     await api("POST", "/api/shutdown");
   } catch (error) {
