@@ -103,6 +103,7 @@ class ProjectItemDto:
     source: Source
     allowed_values: list[Value]
     locked: bool = False
+    local: bool = False
     contents: PluginContentsDto | None = None
 
 

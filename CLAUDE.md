@@ -57,9 +57,15 @@ Overrides are written only to personal files; `<project>/.claude/settings.json` 
 | plugin | `enabledPlugins` in `<project>/.claude/settings.local.json` |
 | mcp, user-scope server | `disabledMcpServers` (array of names) in `projects[<path>]` of `~/.claude.json` |
 | mcp, server only in app pool | force on = copy definition into `projects[<path>].mcpServers` (local scope) |
+| mcp, defined only in `projects[<path>].mcpServers` | `disabledMcpServers`; the definition stays in place |
 | mcp, from `<project>/.mcp.json` | `disabledMcpjsonServers` in `<project>/.claude/settings.local.json` |
 
 Precedence for skills and plugins: local settings → project `settings.json` → global.
+
+Local tools (📂, `local: true`, source `project_file` while not disabled) exist only in the project, so there is nothing to reset to:
+project skills, `.mcp.json` servers, servers defined only in `projects[<path>].mcpServers`, and plugins whose `installed_plugins.json`
+entries have only `local` / `project` scope for this `projectPath`. Such plugins are hidden in the global panel and in other projects.
+For a `local` scope plugin its `enabledPlugins` key in `settings.local.json` is the install record, not an override; reset skips it.
 A chosen value is always written explicitly, even if it equals the inherited or default value; only a reset removes the key.
 Project `PUT` with `{"value": null}` resets the override (no DELETE for values). Global values never accept null.
 

@@ -128,15 +128,42 @@ class ProjectOverrideTest(FakeHomeTestCase):
         self.assertNotIn("mcpServers", self.project_entry())
         self.assertIn("maestro", read_json(self.paths.mcp_pool))
 
-    def test_disabling_local_only_mcp_preserves_definition_in_pool(self) -> None:
+    def test_local_only_mcp_is_local_and_disabled_in_place(self) -> None:
         data = read_json(self.paths.claude_json)
         data["projects"][str(self.project)]["mcpServers"] = {"own": {"command": "own-mcp"}}
         write_json(self.paths.claude_json, data)
 
+        installed = self.local_item(ItemKind.MCP, "own")
         self.service.set_value(self.project, ItemKind.MCP, "own", Value.OFF)
+        disabled = self.project_items()["mcp:own"]
+        self.service.reset(self.project, ItemKind.MCP, "own")
 
-        self.assertEqual(read_json(self.paths.mcp_pool)["own"], {"command": "own-mcp"})
-        self.assertEqual(self.project_items()["mcp:own"], ("off", "global"))
+        self.assertEqual(installed, ("on", "project_file", True))
+        self.assertEqual(disabled, ("off", "override"))
+        self.assertEqual(self.project_entry()["mcpServers"], {"own": {"command": "own-mcp"}})
+        self.assertFalse(self.paths.mcp_pool.exists())
+        self.assertEqual(self.local_item(ItemKind.MCP, "own"), ("on", "project_file", True))
+
+    def test_plugin_installed_only_in_project_is_local(self) -> None:
+        plugin_dir = self.home / "plugin-cache" / "expo"
+        write_json(plugin_dir / ".claude-plugin" / "plugin.json", {"name": "expo"})
+        registry = read_json(self.paths.installed_plugins)
+        registry["plugins"]["expo@official"] = [{"scope": "local", "projectPath": str(self.project), "installPath": str(plugin_dir)}]
+        write_json(self.paths.installed_plugins, registry)
+        write_json(project_local_settings(self.project), {"enabledPlugins": {"expo@official": True}})
+        other = self.project.parent / "other"
+        other.mkdir()
+
+        self.service.set_value(self.project, ItemKind.PLUGIN, "expo@official", Value.OFF)
+        self.service.reset(self.project, ItemKind.PLUGIN, "expo@official")
+
+        self.assertEqual(self.local_item(ItemKind.PLUGIN, "expo@official"), ("off", "project_file", True))
+        self.assertEqual(self.local_settings()["enabledPlugins"], {"expo@official": False})
+        self.assertNotIn("expo@official", {item.id for item in self.pool.pool().plugins})
+        self.assertNotIn("expo@official", {item.id for item in self.service.state(other).items})
+        self.assertFalse(self.local_item(ItemKind.PLUGIN, "playwright@official")[2])
+        with self.assertRaises(BadRequestError):
+            self.pool.set_global(ItemKind.PLUGIN, "expo@official", Value.ON)
 
     def test_disable_mcp_json_server_uses_local_settings(self) -> None:
         write_json(project_mcp_json(self.project), {"mcpServers": {"db": {"command": "db-mcp"}}})

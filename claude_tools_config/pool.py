@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, replace
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,12 @@ SYNCED_SKILLS_PREFIX = "anthropic-skills"
 SYNCED_SKILLS_NOTE = "claude.ai"
 
 
+class PluginScope(StrEnum):
+    USER = "user"
+    PROJECT = "project"
+    LOCAL = "local"
+
+
 @dataclass
 class SkillInfo:
     id: str
@@ -56,9 +63,20 @@ class PluginInfo:
     installed: bool
     skills: list[SkillInfo] = field(default_factory=list)
     mcp_servers: JsonObject = field(default_factory=dict)
+    user_scope: bool = True
+    project_scopes: dict[str, PluginScope] = field(default_factory=dict)
 
     def contents(self) -> PluginContentsDto:
         return PluginContentsDto(skills=len(self.skills), mcp=len(self.mcp_servers))
+
+    def project_scope(self, project: Path) -> PluginScope | None:
+        keys = matching_project_keys(self.project_scopes, project)
+        if not keys:
+            return None
+        return self.project_scopes[keys[0]]
+
+    def available_in(self, project: Path) -> bool:
+        return self.installed and (self.user_scope or self.project_scope(project) is not None)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
@@ -144,15 +162,34 @@ def mcp_config_entries(definition: Any) -> list[ConfigEntryDto]:
     return entries
 
 
-def registry_install_path(entries: Any) -> Path | None:
-    entry = entries
-    if isinstance(entries, list):
-        if not entries:
-            return None
-        entry = entries[0]
-    if isinstance(entry, dict) and entry.get("installPath"):
-        return Path(entry["installPath"])
+def registry_entries(raw: Any) -> list[JsonObject]:
+    if isinstance(raw, dict):
+        return [raw]
+    if isinstance(raw, list):
+        return [entry for entry in raw if isinstance(entry, dict)]
+    return []
+
+
+def registry_install_path(entries: list[JsonObject]) -> Path | None:
+    for entry in entries:
+        if entry.get("installPath"):
+            return Path(entry["installPath"])
     return None
+
+
+def registry_scope(entry: JsonObject) -> PluginScope:
+    try:
+        return PluginScope(entry.get("scope", PluginScope.USER))
+    except ValueError:
+        return PluginScope.USER
+
+
+def project_scopes(entries: list[JsonObject]) -> dict[str, PluginScope]:
+    return {
+        str(entry["projectPath"]): registry_scope(entry)
+        for entry in entries
+        if registry_scope(entry) != PluginScope.USER and entry.get("projectPath")
+    }
 
 
 def locked_or(skill: SkillInfo, value: Value) -> Value:
@@ -234,8 +271,12 @@ class PoolService:
         registry = dict_section(self.store.read(self.paths.installed_plugins), "plugins")
         enabled = dict_section(self.user_settings(), ENABLED_PLUGINS)
         plugins: dict[str, PluginInfo] = {}
-        for plugin_id, entries in registry.items():
-            plugins[plugin_id] = self._read_plugin(plugin_id, registry_install_path(entries))
+        for plugin_id, raw in registry.items():
+            entries = registry_entries(raw)
+            plugin = self._read_plugin(plugin_id, registry_install_path(entries))
+            plugin.project_scopes = project_scopes(entries)
+            plugin.user_scope = not plugin.project_scopes or any(registry_scope(entry) == PluginScope.USER for entry in entries)
+            plugins[plugin_id] = plugin
         for plugin_dir in self._skills_dir_plugins():
             plugin_id = f"{plugin_dir.name}@{SKILLS_DIR_MARKETPLACE}"
             plugins[plugin_id] = self._read_plugin(plugin_id, plugin_dir)
@@ -305,6 +346,7 @@ class PoolService:
                 contents=plugin.contents(),
             )
             for plugin in self.plugins()
+            if plugin.user_scope
         ]
         mcp = [
             PoolItemDto(
@@ -404,7 +446,8 @@ class PoolService:
         self.store.update(self.paths.user_settings, lambda data: set_or_pop(data, SKILL_OVERRIDES, skill_id, str(value)))
 
     def _set_global_plugin(self, plugin_id: str, value: Value) -> None:
-        self.find_plugin(plugin_id)
+        if not self.find_plugin(plugin_id).user_scope:
+            raise BadRequestError(f"Плагин «{plugin_id}» установлен только в проектах")
         enabled = value == Value.ON
         self.store.update(self.paths.user_settings, lambda data: set_or_pop(data, ENABLED_PLUGINS, plugin_id, enabled))
 

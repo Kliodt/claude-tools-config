@@ -79,6 +79,10 @@ class FakeHomeTestCase(unittest.TestCase):
         state = self.service.state(self.project)
         return {f"{item.kind}:{item.id}": (str(item.value), str(item.source)) for item in state.items}
 
+    def local_item(self, kind: ItemKind, item_id: str) -> tuple[str, str, bool]:
+        item = next(item for item in self.service.state(self.project).items if item.kind == kind and item.id == item_id)
+        return str(item.value), str(item.source), item.local
+
     def local_settings(self) -> dict:
         return read_json(project_local_settings(self.project))
 

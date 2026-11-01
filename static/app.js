@@ -50,7 +50,8 @@ const PENCIL_ICON = `<svg ${ICON_ATTRS}><path d="M4 20h4L19 9l-4-4L4 16v4z"></pa
 const TRASH_ICON = `<svg ${ICON_ATTRS}><path d="M4 7h16"></path><path d="M10 11v6M14 11v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>`;
 
 const ROW_CONTROLS_SELECTOR ="input, select, button:not(.row-name)";
-const LOCKED_TITLE = "Заблокировано автором (disable-model-invocation): вызывается только вручную через /имя; можно выключить (off)";
+const LOCAL_TITLE = "Установлен локально в проекте, глобально недоступен";
+const LOCKED_TITLE ="Заблокировано автором (disable-model-invocation): вызывается только вручную через /имя; можно выключить (off)";
 const RESET_TITLE = "Значение переопределено в проекте. Нажмите, чтобы сбросить и наследовать глобальное";
 
 const state = {
@@ -406,6 +407,9 @@ function row(panelName, item, secondary, cells) {
   if (item.locked) {
     title.append(el("span", { className: "lock", title: LOCKED_TITLE }, "🔒"));
   }
+  if (item.local) {
+    title.append(el("span", { className: "lock", title: LOCAL_TITLE }, "📂"));
+  }
   if (item.note) {
     title.append(el("span", { className: "badge note" }, item.note));
   }
@@ -508,8 +512,9 @@ function renderBulk(panelName) {
 
   const cells = [all, el("div", { className: "bulk-main" }, `Выбрано: ${chosen.length}`), values];
   if (panelName === Panel.PROJECT) {
-    const resetProps = { className: "icon", title: "Сбросить переопределения у выбранных", disabled: chosen.length === 0 };
-    cells.push(button(resetProps, "↺", () => runBatch(panelName, chosen, null)));
+    const overridden = chosen.filter((item) => item.source === Source.OVERRIDE);
+    const resetProps = { className: "icon", title: "Сбросить переопределения у выбранных", disabled: overridden.length === 0 };
+    cells.push(button(resetProps, "↺", () => runBatch(panelName, overridden, null)));
   }
   bar.replaceChildren(...cells);
 }
